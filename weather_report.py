@@ -7,7 +7,6 @@
 import requests
 
 
-# 지역 이름을 입력받아 위도와 경도를 구하는 함수
 def get_location(city):
     url = "https://geocoding-api.open-meteo.com/v1/search"
 
@@ -35,6 +34,33 @@ def get_location(city):
     }
 
 
+# 위도와 경도를 이용해 날씨 데이터를 받아오는 함수
+def get_weather(latitude, longitude):
+    url = "https://api.open-meteo.com/v1/forecast"
+
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "hourly": (
+            "temperature_2m,"
+            "relative_humidity_2m,"
+            "precipitation_probability,"
+            "weather_code,"
+            "wind_speed_10m"
+        ),
+        "daily": (
+            "temperature_2m_max,"
+            "temperature_2m_min"
+        ),
+        "timezone": "auto",
+        "forecast_days": 3
+    }
+
+    response = requests.get(url, params=params)
+
+    return response.json()
+
+
 def main():
     print("날씨 리포트 프로그램")
     print("-" * 40)
@@ -54,10 +80,23 @@ def main():
         return
 
     print()
-    print("검색된 지역")
-    print(f"지역명: {location['name']}")
-    print(f"위도: {location['latitude']}")
-    print(f"경도: {location['longitude']}")
+    print(
+        f"{location['name']}의 날씨 정보를 "
+        "가져오는 중입니다..."
+    )
+
+    weather_data = get_weather(
+        location["latitude"],
+        location["longitude"]
+    )
+
+    print()
+    print("날씨 데이터를 성공적으로 가져왔습니다.")
+
+    print(
+        "예보 날짜:",
+        weather_data["daily"]["time"]
+    )
 
 
 if __name__ == "__main__":
