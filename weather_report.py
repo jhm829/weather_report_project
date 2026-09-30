@@ -451,12 +451,16 @@ def main():
                 "프로그램을 종료합니다."
             )
 
-    except requests.RequestException:
+    except requests.RequestException as error:
 
-        print(
-            "날씨 정보를 가져오는 중 "
-            "오류가 발생했습니다."
-        )
+    print(
+        "날씨 정보를 가져오는 중 "
+        "오류가 발생했습니다."
+    )
+
+    print(
+        f"오류 내용: {error}"
+    )
 
 
 if __name__ == "__main__":
