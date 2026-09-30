@@ -5,9 +5,9 @@
 # https://github.com/본인아이디/weather-report
 
 import requests
+from datetime import datetime
 
 
-# 날씨 코드 숫자를 한글 날씨 상태로 변경
 def weather_text(code):
 
     weather_codes = {
@@ -45,6 +45,7 @@ def weather_text(code):
 
 
 def get_location(city):
+
     url = "https://geocoding-api.open-meteo.com/v1/search"
 
     params = {
@@ -70,6 +71,7 @@ def get_location(city):
 
 
 def get_weather(latitude, longitude):
+
     url = "https://api.open-meteo.com/v1/forecast"
 
     params = {
@@ -98,12 +100,177 @@ def get_weather(latitude, longitude):
     return response.json()
 
 
+# 특정 날짜, 특정 시간의 날씨를 가져오기
+def get_hour_weather(
+    weather_data,
+    date,
+    hour
+):
+
+    target_time = (
+        f"{date}T{hour:02d}:00"
+    )
+
+    times = weather_data[
+        "hourly"
+    ]["time"]
+
+    if target_time not in times:
+        return None
+
+    index = times.index(target_time)
+
+    temperature = weather_data[
+        "hourly"
+    ]["temperature_2m"][index]
+
+    humidity = weather_data[
+        "hourly"
+    ]["relative_humidity_2m"][index]
+
+    rain = weather_data[
+        "hourly"
+    ]["precipitation_probability"][index]
+
+    code = weather_data[
+        "hourly"
+    ]["weather_code"][index]
+
+    wind = weather_data[
+        "hourly"
+    ]["wind_speed_10m"][index]
+
+    # km/h를 m/s로 변환
+    wind = wind / 3.6
+
+    return {
+        "temperature": temperature,
+        "humidity": humidity,
+        "rain": rain,
+        "weather": weather_text(code),
+        "wind": round(wind, 1)
+    }
+
+
+def print_report(
+    location,
+    weather_data
+):
+
+    day_names = [
+        "오늘",
+        "내일",
+        "모레"
+    ]
+
+    print()
+    print("=" * 50)
+
+    print(
+        f"{location['name']} "
+        "3일 날씨 예보"
+    )
+
+    print("=" * 50)
+
+    dates = weather_data[
+        "daily"
+    ]["time"]
+
+    for i in range(3):
+
+        date = dates[i]
+
+        date_text = datetime.strptime(
+            date,
+            "%Y-%m-%d"
+        ).strftime("%m월 %d일")
+
+        print()
+        print(
+            f"[{day_names[i]}] "
+            f"{date_text}"
+        )
+
+        print("-" * 50)
+
+        for hour in [6, 15]:
+
+            weather = get_hour_weather(
+                weather_data,
+                date,
+                hour
+            )
+
+            if weather is None:
+                continue
+
+            if hour == 6:
+                time_text = "오전 6시"
+            else:
+                time_text = "오후 3시"
+
+            print()
+            print(time_text)
+
+            print(
+                f"날씨 : "
+                f"{weather['weather']}"
+            )
+
+            print(
+                f"기온 : "
+                f"{weather['temperature']} ℃"
+            )
+
+            print(
+                f"강수확률 : "
+                f"{weather['rain']} %"
+            )
+
+            print(
+                f"습도 : "
+                f"{weather['humidity']} %"
+            )
+
+            print(
+                f"풍속 : "
+                f"{weather['wind']} m/s"
+            )
+
+        minimum = weather_data[
+            "daily"
+        ]["temperature_2m_min"][i]
+
+        maximum = weather_data[
+            "daily"
+        ]["temperature_2m_max"][i]
+
+        print()
+        print(
+            f"최저기온 : {minimum} ℃"
+        )
+
+        print(
+            f"최고기온 : {maximum} ℃"
+        )
+
+        print("=" * 50)
+
+
 def main():
-    print("날씨 리포트 프로그램")
-    print("-" * 40)
+
+    print(
+        "날씨 예보 프로그램"
+    )
+
+    print(
+        "3일간 오전 6시 / "
+        "오후 3시 날씨를 제공합니다."
+    )
 
     city = input(
-        "날씨를 확인할 지역을 입력하세요 "
+        "\n지역을 입력하세요 "
         "(기본값: 천안): "
     ).strip()
 
@@ -113,24 +280,28 @@ def main():
     location = get_location(city)
 
     if location is None:
-        print("지역을 찾을 수 없습니다.")
+
+        print(
+            "지역을 찾을 수 없습니다."
+        )
+
         return
+
+    print()
+    print(
+        f"{location['name']}의 "
+        "날씨 정보를 가져옵니다..."
+    )
 
     weather_data = get_weather(
         location["latitude"],
         location["longitude"]
     )
 
-    print()
-    print(f"지역: {location['name']}")
-
-    # 첫 번째 시간대 날씨 코드 확인
-    code = weather_data[
-        "hourly"
-    ]["weather_code"][0]
-
-    print(f"날씨 코드: {code}")
-    print(f"날씨 상태: {weather_text(code)}")
+    print_report(
+        location,
+        weather_data
+    )
 
 
 if __name__ == "__main__":
