@@ -195,7 +195,10 @@ def print_report(
     location,
     weather_data
 ):
-
+    report_time = datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+    
     day_names = [
         "오늘",
         "내일",
@@ -210,6 +213,11 @@ def print_report(
     print(
         f"{location['name']} "
         "3일 날씨 예보"
+    )
+
+    print(
+        f"리포트 생성 시간 : "
+        f"{report_time}"
     )
 
     print(
