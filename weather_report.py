@@ -416,6 +416,12 @@ def main():
             )
 
             return
+        
+        print()
+        print("검색된 지역 정보")
+        print(f"지역명 : {location['name']}")
+        print(f"위도 : {location['latitude']}")
+        print(f"경도 : {location['longitude']}")
 
         print()
         print(
@@ -453,14 +459,14 @@ def main():
 
     except requests.RequestException as error:
 
-    print(
-        "날씨 정보를 가져오는 중 "
-        "오류가 발생했습니다."
-    )
+        print(
+            "날씨 정보를 가져오는 중 "
+            "오류가 발생했습니다."
+        )
 
-    print(
-        f"오류 내용: {error}"
-    )
+        print(
+             f"오류 내용: {error}"
+        )
 
 
 if __name__ == "__main__":
