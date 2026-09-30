@@ -5,6 +5,8 @@
 # https://github.com/본인아이디/weather-report
 
 import requests
+import json
+
 from datetime import datetime
 
 
@@ -46,7 +48,10 @@ def weather_text(code):
 
 def get_location(city):
 
-    url = "https://geocoding-api.open-meteo.com/v1/search"
+    url = (
+        "https://geocoding-api."
+        "open-meteo.com/v1/search"
+    )
 
     params = {
         "name": city,
@@ -55,7 +60,14 @@ def get_location(city):
         "format": "json"
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(
+        url,
+        params=params,
+        timeout=10
+    )
+
+    response.raise_for_status()
+
     data = response.json()
 
     if "results" not in data:
@@ -65,16 +77,25 @@ def get_location(city):
 
     return {
         "name": location["name"],
-        "latitude": location["latitude"],
-        "longitude": location["longitude"]
+        "latitude":
+            location["latitude"],
+        "longitude":
+            location["longitude"]
     }
 
 
-def get_weather(latitude, longitude):
+def get_weather(
+    latitude,
+    longitude
+):
 
-    url = "https://api.open-meteo.com/v1/forecast"
+    url = (
+        "https://api.open-meteo.com/"
+        "v1/forecast"
+    )
 
     params = {
+
         "latitude": latitude,
         "longitude": longitude,
 
@@ -92,15 +113,21 @@ def get_weather(latitude, longitude):
         ),
 
         "timezone": "auto",
+
         "forecast_days": 3
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(
+        url,
+        params=params,
+        timeout=10
+    )
+
+    response.raise_for_status()
 
     return response.json()
 
 
-# 특정 날짜, 특정 시간의 날씨를 가져오기
 def get_hour_weather(
     weather_data,
     date,
@@ -118,7 +145,9 @@ def get_hour_weather(
     if target_time not in times:
         return None
 
-    index = times.index(target_time)
+    index = times.index(
+        target_time
+    )
 
     temperature = weather_data[
         "hourly"
@@ -140,15 +169,25 @@ def get_hour_weather(
         "hourly"
     ]["wind_speed_10m"][index]
 
-    # km/h를 m/s로 변환
     wind = wind / 3.6
 
     return {
-        "temperature": temperature,
-        "humidity": humidity,
-        "rain": rain,
-        "weather": weather_text(code),
-        "wind": round(wind, 1)
+        "time": target_time,
+
+        "weather":
+            weather_text(code),
+
+        "temperature":
+            temperature,
+
+        "rain_probability":
+            rain,
+
+        "humidity":
+            humidity,
+
+        "wind_speed":
+            round(wind, 1)
     }
 
 
@@ -163,12 +202,19 @@ def print_report(
         "모레"
     ]
 
+    report = []
+
     print()
     print("=" * 50)
 
     print(
         f"{location['name']} "
         "3일 날씨 예보"
+    )
+
+    print(
+        "(오전 6시 / "
+        "오후 3시 기준)"
     )
 
     print("=" * 50)
@@ -184,7 +230,9 @@ def print_report(
         date_text = datetime.strptime(
             date,
             "%Y-%m-%d"
-        ).strftime("%m월 %d일")
+        ).strftime(
+            "%m월 %d일"
+        )
 
         print()
         print(
@@ -193,6 +241,12 @@ def print_report(
         )
 
         print("-" * 50)
+
+        day_report = {
+            "date": date,
+            "day": day_names[i],
+            "weather": []
+        }
 
         for hour in [6, 15]:
 
@@ -207,6 +261,7 @@ def print_report(
 
             if hour == 6:
                 time_text = "오전 6시"
+
             else:
                 time_text = "오후 3시"
 
@@ -225,7 +280,7 @@ def print_report(
 
             print(
                 f"강수확률 : "
-                f"{weather['rain']} %"
+                f"{weather['rain_probability']} %"
             )
 
             print(
@@ -235,8 +290,12 @@ def print_report(
 
             print(
                 f"풍속 : "
-                f"{weather['wind']} m/s"
+                f"{weather['wind_speed']} m/s"
             )
+
+            day_report[
+                "weather"
+            ].append(weather)
 
         minimum = weather_data[
             "daily"
@@ -247,15 +306,80 @@ def print_report(
         ]["temperature_2m_max"][i]
 
         print()
+
         print(
-            f"최저기온 : {minimum} ℃"
+            f"최저기온 : "
+            f"{minimum} ℃"
         )
 
         print(
-            f"최고기온 : {maximum} ℃"
+            f"최고기온 : "
+            f"{maximum} ℃"
+        )
+
+        day_report[
+            "minimum_temperature"
+        ] = minimum
+
+        day_report[
+            "maximum_temperature"
+        ] = maximum
+
+        report.append(
+            day_report
         )
 
         print("=" * 50)
+
+    return report
+
+
+def save_json(
+    location,
+    report
+):
+
+    now = datetime.now().strftime(
+        "%Y%m%d_%H%M%S"
+    )
+
+    filename = (
+        f"weather_"
+        f"{location['name']}_"
+        f"{now}.json"
+    )
+
+    data = {
+        "location":
+            location,
+
+        "created_at":
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            ),
+
+        "forecast":
+            report
+    }
+
+    with open(
+        filename,
+        "w",
+        encoding="utf-8"
+    ) as file:
+
+        json.dump(
+            data,
+            file,
+            ensure_ascii=False,
+            indent=4
+        )
+
+    print()
+    print(
+        f"{filename} 파일로 "
+        "저장되었습니다."
+    )
 
 
 def main():
@@ -269,39 +393,70 @@ def main():
         "오후 3시 날씨를 제공합니다."
     )
 
+    print("-" * 50)
+
     city = input(
-        "\n지역을 입력하세요 "
+        "지역을 입력하세요 "
         "(기본값: 천안): "
     ).strip()
 
     if city == "":
         city = "천안"
 
-    location = get_location(city)
+    try:
 
-    if location is None:
-
-        print(
-            "지역을 찾을 수 없습니다."
+        location = get_location(
+            city
         )
 
-        return
+        if location is None:
 
-    print()
-    print(
-        f"{location['name']}의 "
-        "날씨 정보를 가져옵니다..."
-    )
+            print(
+                "지역을 찾을 수 없습니다."
+            )
 
-    weather_data = get_weather(
-        location["latitude"],
-        location["longitude"]
-    )
+            return
 
-    print_report(
-        location,
-        weather_data
-    )
+        print()
+        print(
+            f"{location['name']}의 "
+            "날씨 정보를 가져옵니다..."
+        )
+
+        weather_data = get_weather(
+            location["latitude"],
+            location["longitude"]
+        )
+
+        report = print_report(
+            location,
+            weather_data
+        )
+
+        save = input(
+            "\n날씨 정보를 JSON 파일로 "
+            "저장하시겠습니까? (y/n): "
+        ).strip().lower()
+
+        if save == "y":
+
+            save_json(
+                location,
+                report
+            )
+
+        else:
+
+            print(
+                "프로그램을 종료합니다."
+            )
+
+    except requests.RequestException:
+
+        print(
+            "날씨 정보를 가져오는 중 "
+            "오류가 발생했습니다."
+        )
 
 
 if __name__ == "__main__":
